@@ -6,15 +6,13 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="HandheldFriendly" content="True">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-    <meta name="description" content="About Me 2022.04 - ？校招入职华为安全。 2020.11 - 2021.07腾讯安全CSIG实习生。 2020.07 - 2020.10深信服攻防研究实习生。 2019-2022USTC SSE。">
-<meta property="og:type" content="website">
-<meta property="og:title" content="About Me">
-<meta property="og:url" content="https://k4nn0n.github.io/about/index.html">
+    <meta property="og:type" content="website">
+<meta property="og:title" content="Search">
+<meta property="og:url" content="https://k4nn0n.github.io/search/index.html">
 <meta property="og:site_name" content="K4NN0N&#39;s Website">
-<meta property="og:description" content="About Me 2022.04 - ？校招入职华为安全。 2020.11 - 2021.07腾讯安全CSIG实习生。 2020.07 - 2020.10深信服攻防研究实习生。 2019-2022USTC SSE。">
 <meta property="og:locale" content="en_US">
-<meta property="article:published_time" content="2022-12-10T14:47:23.000Z">
-<meta property="article:modified_time" content="2022-12-10T14:54:58.071Z">
+<meta property="article:published_time" content="2022-12-10T15:05:23.350Z">
+<meta property="article:modified_time" content="2022-12-10T15:05:23.350Z">
 <meta property="article:author" content="K4NN0N">
 <meta name="twitter:card" content="summary">
     
@@ -36,7 +34,7 @@
       
     
     <!-- title -->
-    <title>About Me</title>
+    <title>Search</title>
     <!-- styles -->
     
 <link rel="stylesheet" href="/css/style.css">
@@ -89,13 +87,15 @@
 
   <div class="content" itemprop="articleBody">
       
-          <h1 id="About-Me"><a href="#About-Me" class="headerlink" title="About Me"></a>About Me</h1><hr>
-<p>2022.04 - ？<br>校招入职华为安全。</p>
-<p>2020.11 - 2021.07<br>腾讯安全CSIG实习生。</p>
-<p>2020.07 - 2020.10<br>深信服攻防研究实习生。</p>
-<p>2019-2022<br>USTC SSE。</p>
+        <section id="search">
+  <form>
+    <input type="text" class="search-input" id="search-input" placeholder="Search...">
+  </form>
+  <div id="search-result"></div>
+  <p class="search-no-result">No results found.</p>
+</section>
 
-        
+      
   </div>
 </article>
 
@@ -146,6 +146,45 @@
 <script src="/js/main.js"></script>
 
 <!-- search -->
+
+  
+<script src="/js/search.js"></script>
+
+  <script type="text/javascript">
+  $(function() {
+
+    var $inputArea = $("input#search-input");
+    var $resultArea = document.querySelector("div#search-result");
+
+    $inputArea.focus(function() {
+      var search_path = "search.xml";
+      if (search_path.length == 0) {
+        search_path = "search.xml";
+      }
+      var path = "/" + search_path;
+      searchFunc(path, 'search-input', 'search-result');
+    });
+
+    $inputArea.keydown(function(e) {
+      if (e.which == 13) {
+        e.preventDefault();
+      }
+    });
+
+    var observer = new MutationObserver(function(mutationsList, observer) {
+      if (mutationsList.length == 1) {
+        if (mutationsList[0].addedNodes.length) {
+          $(".search-no-result").hide();
+        } else if (mutationsList[0].removedNodes.length) {
+          $(".search-no-result").show(200);
+        }
+      }
+    });
+
+    observer.observe($resultArea, { childList: true });
+
+  });
+  </script>
 
 <!-- Google Analytics -->
 
