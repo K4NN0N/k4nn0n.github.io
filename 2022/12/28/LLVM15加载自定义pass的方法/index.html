@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+    <!-- so meta -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="HandheldFriendly" content="True">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+    <meta name="description" content="​	最近学习LLVM，尝试编写LLVM Pass，发现网上的许多博客文章加载自定义Pass的方式仍然停留在旧版方法，LLVM13开始对PassManager进行了变更，在LLVM13-14版本可以采用临时方案-flegacy-pass-manager解决，但是到了LLVM15+，旧版的LegacyPassManager只能用opt加载，所以最好是学习使用新版的PassManager。 1. 编写自">
+<meta property="og:type" content="article">
+<meta property="og:title" content="LLVM15加载自定义pass的方法">
+<meta property="og:url" content="https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/index.html">
+<meta property="og:site_name" content="K4NN0N">
+<meta property="og:description" content="​	最近学习LLVM，尝试编写LLVM Pass，发现网上的许多博客文章加载自定义Pass的方式仍然停留在旧版方法，LLVM13开始对PassManager进行了变更，在LLVM13-14版本可以采用临时方案-flegacy-pass-manager解决，但是到了LLVM15+，旧版的LegacyPassManager只能用opt加载，所以最好是学习使用新版的PassManager。 1. 编写自">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2022-12-28T13:36:29.676Z">
+<meta property="article:modified_time" content="2023-03-16T14:56:36.103Z">
+<meta property="article:author" content="K4NN0N">
+<meta property="article:tag" content="LLVM">
+<meta name="twitter:card" content="summary">
+    
+    
+      
+        
+          <link rel="shortcut icon" href="/images/image1.jpeg">
+        
+      
+      
+        
+          <link rel="icon" type="image/png" href="/images/image1.jpeg" sizes="192x192">
+        
+      
+      
+        
+          <link rel="apple-touch-icon" sizes="180x180" href="/images/image1.jpeg">
+        
+      
+    
+    <!-- title -->
+    <title>LLVM15加载自定义pass的方法</title>
+    <!-- styles -->
+    
+<link rel="stylesheet" href="/css/style.css">
+
+    <!-- persian styles -->
+    
+    <!-- rss -->
+    
+    
+	<!-- mathjax -->
+	
+<meta name="generator" content="Hexo 6.3.0"></head>
+
+<body class="max-width mx-auto px3 ltr">
+    
+      <div id="header-post">
+  <a id="menu-icon" href="#" aria-label="Menu"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="menu-icon-tablet" href="#" aria-label="Menu"><i class="fas fa-bars fa-lg"></i></a>
+  <a id="top-icon-tablet" href="#" aria-label="Top" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');" style="display:none;"><i class="fas fa-chevron-up fa-lg"></i></a>
+  <span id="menu">
+    <span id="nav">
+      <ul>
+        <!--
+       --><li><a href="/">Home</a></li><!--
+     --><!--
+       --><li><a href="/about/">About</a></li><!--
+     --><!--
+       --><li><a href="/archives/">Articles</a></li><!--
+     --><!--
+       --><li><a href="/search/">Search</a></li><!--
+     -->
+      </ul>
+    </span>
+    <br/>
+    <span id="actions">
+      <ul>
+        
+        <li><a class="icon" aria-label="Previous post" href="/2023/02/22/LLVM%E7%BC%96%E8%AF%91%E5%8F%8A%E5%8A%A0%E8%BD%BDpass/"><i class="fas fa-chevron-left" aria-hidden="true" onmouseover="$('#i-prev').toggle();" onmouseout="$('#i-prev').toggle();"></i></a></li>
+        
+        
+        <li><a class="icon" aria-label="Next post" href="/2022/12/28/unicorn/"><i class="fas fa-chevron-right" aria-hidden="true" onmouseover="$('#i-next').toggle();" onmouseout="$('#i-next').toggle();"></i></a></li>
+        
+        <li><a class="icon" aria-label="Back to top" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fas fa-chevron-up" aria-hidden="true" onmouseover="$('#i-top').toggle();" onmouseout="$('#i-top').toggle();"></i></a></li>
+        <li><a class="icon" aria-label="Share post" href="#"><i class="fas fa-share-alt" aria-hidden="true" onmouseover="$('#i-share').toggle();" onmouseout="$('#i-share').toggle();" onclick="$('#share').toggle();return false;"></i></a></li>
+      </ul>
+      <span id="i-prev" class="info" style="display:none;">Previous post</span>
+      <span id="i-next" class="info" style="display:none;">Next post</span>
+      <span id="i-top" class="info" style="display:none;">Back to top</span>
+      <span id="i-share" class="info" style="display:none;">Share post</span>
+    </span>
+    <br/>
+    <div id="share" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/"><i class="fab fa-facebook " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&text=LLVM15加载自定义pass的方法"><i class="fab fa-twitter " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&title=LLVM15加载自定义pass的方法"><i class="fab fa-linkedin " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&is_video=false&description=LLVM15加载自定义pass的方法"><i class="fab fa-pinterest " aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=LLVM15加载自定义pass的方法&body=Check out this article: https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/"><i class="fas fa-envelope " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&title=LLVM15加载自定义pass的方法"><i class="fab fa-get-pocket " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&title=LLVM15加载自定义pass的方法"><i class="fab fa-reddit " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&title=LLVM15加载自定义pass的方法"><i class="fab fa-stumbleupon " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&title=LLVM15加载自定义pass的方法"><i class="fab fa-digg " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&name=LLVM15加载自定义pass的方法&description="><i class="fab fa-tumblr " aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&t=LLVM15加载自定义pass的方法"><i class="fab fa-hacker-news " aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+    <div id="toc">
+      <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E7%BC%96%E5%86%99%E8%87%AA%E5%AE%9A%E4%B9%89Pass%EF%BC%88LLVM15-opt%E9%80%82%E9%85%8D%E6%97%A7%E7%89%88PassManager%EF%BC%89"><span class="toc-number">1.</span> <span class="toc-text">1. 编写自定义Pass（LLVM15+opt适配旧版PassManager）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-NewPassManager%E6%96%B9%E6%A1%88%EF%BC%88LLVM13-%EF%BC%89"><span class="toc-number">2.</span> <span class="toc-text">2. NewPassManager方案（LLVM13+）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%AF%E8%83%BD%E5%AD%98%E5%9C%A8%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">3.</span> <span class="toc-text">可能存在的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="toc-number">4.</span> <span class="toc-text">参考链接</span></a></li></ol>
+    </div>
+  </span>
+</div>
+
+    
+    <div class="content index py4">
+        
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+  <header>
+    
+    <h1 class="posttitle" itemprop="name headline">
+        LLVM15加载自定义pass的方法
+    </h1>
+
+
+
+    <div class="meta">
+      <span class="author" itemprop="author" itemscope itemtype="http://schema.org/Person">
+        <span itemprop="name">K4NN0N</span>
+      </span>
+      
+    <div class="postdate">
+      
+        <time datetime="2022-12-28T13:36:29.676Z" itemprop="datePublished">2022-12-28</time>
+        
+      
+    </div>
+
+
+      
+
+      
+    <div class="article-tag">
+        <i class="fas fa-tag"></i>
+        <a class="tag-link-link" href="/tags/LLVM/" rel="tag">LLVM</a>
+    </div>
+
+
+    </div>
+  </header>
+  
+
+  <div class="content" itemprop="articleBody">
+    <p>​	最近学习LLVM，尝试编写LLVM Pass，发现网上的许多博客文章加载自定义Pass的方式仍然停留在旧版方法，LLVM13开始对PassManager进行了变更，在LLVM13-14版本可以采用临时方案-flegacy-pass-manager解决，但是到了LLVM15+，旧版的LegacyPassManager只能用opt加载，所以最好是学习使用新版的PassManager。</p>
+<h2 id="1-编写自定义Pass（LLVM15-opt适配旧版PassManager）"><a href="#1-编写自定义Pass（LLVM15-opt适配旧版PassManager）" class="headerlink" title="1. 编写自定义Pass（LLVM15+opt适配旧版PassManager）"></a>1. 编写自定义Pass（LLVM15+opt适配旧版PassManager）</h2><p>参考LLVM官方<a target="_blank" rel="noopener" href="https://llvm.org/docs/CMake.html#id19">Developing LLVM passes out of source</a></p>
+<p>（1）创建目录结构，当前目录llvmPass下：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">.</span><br><span class="line">├── CMakeLists.txt</span><br><span class="line">└── FuncName</span><br><span class="line">    ├── CMakeLists.txt</span><br><span class="line">    └── FuncEncrypt.cpp</span><br></pre></td></tr></table></figure>
+
+<p>（2）llvmPass&#x2F;CMakeLists：</p>
+<p>先添加环境变量$LLVM_HOME 指向LLVM15下的LLVM-llvmorg-15.0.6&#x2F;llvm&#x2F;build，编写pass时需要用到该目录下的库文件等。</p>
+<figure class="highlight cmake"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span>(<span class="keyword">NOT</span> <span class="keyword">DEFINED</span> ENV&#123;LLVM_HOME&#125;)</span><br><span class="line">    <span class="keyword">message</span>(FATAL_ERROR <span class="string">&quot;$LLVM_HOME is not defined&quot;</span>)</span><br><span class="line"><span class="keyword">endif</span>()</span><br><span class="line"><span class="keyword">if</span>(<span class="keyword">NOT</span> <span class="keyword">DEFINED</span> ENV&#123;LLVM_DIR&#125;)</span><br><span class="line">    <span class="keyword">set</span>(ENV&#123;LLVM_DIR&#125; $ENV&#123;LLVM_HOME&#125;/lib/cmake/llvm)</span><br><span class="line"><span class="keyword">endif</span>()</span><br><span class="line"><span class="keyword">find_package</span>(LLVM REQUIRED CONFIG)</span><br><span class="line"><span class="keyword">add_definitions</span>(<span class="variable">$&#123;LLVM_DEFINITIONS&#125;</span>)</span><br><span class="line"><span class="keyword">include_directories</span>(<span class="variable">$&#123;LLVM_INCLUDE_DIRS&#125;</span>)</span><br><span class="line"><span class="keyword">link_directories</span>(<span class="variable">$&#123;LLVM_LIBRARY_DIRS&#125;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">add_subdirectory</span>(FuncName)</span><br></pre></td></tr></table></figure>
+
+<p>（3）llvmPass&#x2F;FuncName&#x2F;CMakeList.txt：</p>
+<figure class="highlight cmake"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SET</span>(CMAKE_CXX_FLAGS <span class="string">&quot;-Wall -fno-rtti&quot;</span>)</span><br><span class="line"></span><br><span class="line"><span class="keyword">add_library</span>(FuncEncryptPass MODULE</span><br><span class="line">  FuncEncrypt.cpp</span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+
+<p>（4）llvmPass&#x2F;FuncEncrypt.cpp：</p>
+<p>简单实现自定义Pass的功能：将程序函数名修改为encryptedXXX</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;llvm/Pass.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;llvm/IR/Function.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;llvm/Support/raw_ostream.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;llvm/IR/LegacyPassManager.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;llvm/Transforms/IPO/PassManagerBuilder.h&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&quot;string.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">using</span> <span class="keyword">namespace</span> llvm;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> i = <span class="number">0</span>;</span><br><span class="line"><span class="keyword">namespace</span> &#123;</span><br><span class="line"><span class="keyword">struct</span> <span class="title class_">FuncEncrypt</span> : <span class="keyword">public</span> FunctionPass &#123;</span><br><span class="line">  <span class="type">static</span> <span class="type">char</span> ID;</span><br><span class="line">  <span class="built_in">FuncEncrypt</span>() : <span class="built_in">FunctionPass</span>(ID) &#123;&#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="type">bool</span> <span class="title">runOnFunction</span><span class="params">(Function &amp;F)</span> <span class="keyword">override</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span>(F.<span class="built_in">getName</span>().<span class="built_in">compare</span>(<span class="string">&quot;main&quot;</span>))&#123;</span><br><span class="line">      <span class="type">char</span> name[<span class="number">30</span>] = &#123;<span class="number">0</span>&#125;;</span><br><span class="line">      <span class="built_in">sprintf</span>(name, <span class="string">&quot;encrypted%d&quot;</span>, i++);</span><br><span class="line">      F.<span class="built_in">setName</span>(name);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;; <span class="comment">// end of struct Hello</span></span><br><span class="line">&#125;  <span class="comment">// end of anonymous namespace</span></span><br><span class="line"></span><br><span class="line"><span class="type">char</span> FuncEncrypt::ID = <span class="number">0</span>;</span><br><span class="line"><span class="function"><span class="type">static</span> RegisterPass&lt;FuncEncrypt&gt; <span class="title">X</span><span class="params">(<span class="string">&quot;FuncEncrypt&quot;</span>, <span class="string">&quot;A Pass to Encrypt Function Name&quot;</span>,</span></span></span><br><span class="line"><span class="params"><span class="function">                             <span class="literal">false</span> <span class="comment">/* Only looks at CFG */</span>,</span></span></span><br><span class="line"><span class="params"><span class="function">                             <span class="literal">false</span> <span class="comment">/* Analysis Pass */</span>)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">static</span> RegisterStandardPasses <span class="title">Y</span><span class="params">(</span></span></span><br><span class="line"><span class="params"><span class="function">    PassManagerBuilder::EP_EarlyAsPossible,</span></span></span><br><span class="line"><span class="params"><span class="function">    [](<span class="type">const</span> PassManagerBuilder &amp;Builder,</span></span></span><br><span class="line"><span class="params"><span class="function">       legacy::PassManagerBase &amp;PM) &#123; PM.add(<span class="keyword">new</span> FuncEncrypt()); &#125;)</span></span>;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>cmake构建后，生成libFuncEncryptPass.so，查看下注册结果：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">opt -load ./llvmPass/build/FuncName/libFuncEncryptPass.so -help | grep Encrypt</span><br><span class="line">      --FuncEncrypt                          - A Pass to Encrypt Function Name</span><br></pre></td></tr></table></figure>
+
+
+
+<p>编写一个test.c文件，随便定义几个函数：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">func1()&#123;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br><span class="line">func2()&#123;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">()</span>&#123;</span><br><span class="line">  ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>采用llvm15方案加载自定义pass：</p>
+<p>clang：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">clang -fpass-plugin=./llvmPass/build/FuncName/libFuncEncryptPass.so test.c                             error: unable to load plugin <span class="string">&#x27;./llvmPass/build/FuncName/libFuncEncryptPass.so&#x27;</span>: <span class="string">&#x27;Plugin entry point not found in &#x27;</span>./llvmPass/build/FuncName/libFuncEncryptPass.so<span class="string">&#x27;. Is this a legacy plugin?&#x27;</span></span></span><br><span class="line">1 error generated.</span><br></pre></td></tr></table></figure>
+
+<p>opt：</p>
+<p>先编成IR：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">clang -emit-llvm test.c -S -o test.ll</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">opt -load-pass-plugin ./llvmPass/build/FuncName/libFuncEncryptPass.so -S -passes=FuncEncrypt test.ll -o test1.ll</span></span><br><span class="line">Failed to load passes from &#x27;./llvmPass/build/FuncName/libFuncEncryptPass.so&#x27;. Request ignored.</span><br><span class="line">Expected&lt;T&gt; must be checked before access or destruction.</span><br><span class="line">Unchecked Expected&lt;T&gt; contained error:</span><br><span class="line">Plugin entry point not found in &#x27;./llvmPass/build/FuncName/libFuncEncryptPass.so&#x27;. Is this a legacy plugin?PLEASE submit a bug report to https://github.com/llvm/llvm-project/issues/ and include the crash backtrace.</span><br></pre></td></tr></table></figure>
+
+<p>可以看到两者都提示没有找到plugin entry point</p>
+<p>如开头所说，这是因为LLVM13开始采用了新的PassManager，对于opt可以增加-enable-new-pm&#x3D;0解决：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">opt -load ./llvmPass/build/FuncName/libFuncEncryptPass.so -S --FuncEncrypt -enable-new-pm=0 test.ll -o test1.ll</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">clang test1.ll -o <span class="built_in">test</span> &amp;&amp; nm <span class="built_in">test</span> | grep encrypted</span></span><br><span class="line">0000000000001140 T encrypted0</span><br><span class="line">0000000000001180 T encrypted1</span><br></pre></td></tr></table></figure>
+
+<p>可以看到test.c中两个函数名都被成功修改。</p>
+<h2 id="2-NewPassManager方案（LLVM13-）"><a href="#2-NewPassManager方案（LLVM13-）" class="headerlink" title="2. NewPassManager方案（LLVM13+）"></a>2. NewPassManager方案（LLVM13+）</h2><h2 id="可能存在的问题"><a href="#可能存在的问题" class="headerlink" title="可能存在的问题"></a>可能存在的问题</h2><p>（1）执行clang 或 opt 后 提示 undefined symbol: _ZTIN4llvm12FunctionPassE：</p>
+<p>参考：<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/17225956/developing-an-llvm-pass-with-cmake-out-of-llvm-source-directory">https://stackoverflow.com/questions/17225956/developing-an-llvm-pass-with-cmake-out-of-llvm-source-directory</a></p>
+<p>Undefined Symbol: _ZTIN4llvm12FunctionPassE There is an inconsistency between LLVM main build system and the cmake support for building out-of-source. The LLVM binaries are built without runtime type info “-fno-rtti”. Therefore, the out-of-source passes have to be built the same way otherwise opt will complain that symbol “_ZTIN4llvm12FunctionPassE” is undefined.</p>
+<p>To solve this problem, LLVM must be compile with RTTI enabled. Add “-DLLVM_REQUIRES_RTTI&#x3D;1” to cmake, or add “REQUIRES_RTTI&#x3D;1” to make.</p>
+<p>意思是编译LLVM时没有开启RTTI 所以自定义pass也应该以相同方式构建，在CMakeLists中加一行：SET(CMAKE_CXX_FLAGS “-Wall -fno-rtti”)</p>
+<h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><p><a target="_blank" rel="noopener" href="https://releases.llvm.org/15.0.0/docs/WritingAnLLVMPass.html#introduction-what-is-a-pass">https://releases.llvm.org/15.0.0/docs/WritingAnLLVMPass.html#introduction-what-is-a-pass</a></p>
+<p><a target="_blank" rel="noopener" href="https://github.com/banach-space/llvm-tutor/">https://github.com/banach-space/llvm-tutor/</a></p>
+<p><a target="_blank" rel="noopener" href="https://www.leadroyal.cn/categories/llvm/">https://www.leadroyal.cn/categories/llvm/</a></p>
+
+  </div>
+</article>
+
+
+
+        
+          <div id="footer-post-container">
+  <div id="footer-post">
+
+    <div id="nav-footer" style="display: none">
+      <ul>
+         
+          <li><a href="/">Home</a></li>
+         
+          <li><a href="/about/">About</a></li>
+         
+          <li><a href="/archives/">Articles</a></li>
+         
+          <li><a href="/search/">Search</a></li>
+        
+      </ul>
+    </div>
+
+    <div id="toc-footer" style="display: none">
+      <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-%E7%BC%96%E5%86%99%E8%87%AA%E5%AE%9A%E4%B9%89Pass%EF%BC%88LLVM15-opt%E9%80%82%E9%85%8D%E6%97%A7%E7%89%88PassManager%EF%BC%89"><span class="toc-number">1.</span> <span class="toc-text">1. 编写自定义Pass（LLVM15+opt适配旧版PassManager）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-NewPassManager%E6%96%B9%E6%A1%88%EF%BC%88LLVM13-%EF%BC%89"><span class="toc-number">2.</span> <span class="toc-text">2. NewPassManager方案（LLVM13+）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%AF%E8%83%BD%E5%AD%98%E5%9C%A8%E7%9A%84%E9%97%AE%E9%A2%98"><span class="toc-number">3.</span> <span class="toc-text">可能存在的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8F%82%E8%80%83%E9%93%BE%E6%8E%A5"><span class="toc-number">4.</span> <span class="toc-text">参考链接</span></a></li></ol>
+    </div>
+
+    <div id="share-footer" style="display: none">
+      <ul>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.facebook.com/sharer.php?u=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/"><i class="fab fa-facebook fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://twitter.com/share?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&text=LLVM15加载自定义pass的方法"><i class="fab fa-twitter fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.linkedin.com/shareArticle?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&title=LLVM15加载自定义pass的方法"><i class="fab fa-linkedin fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://pinterest.com/pin/create/bookmarklet/?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&is_video=false&description=LLVM15加载自定义pass的方法"><i class="fab fa-pinterest fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" href="mailto:?subject=LLVM15加载自定义pass的方法&body=Check out this article: https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/"><i class="fas fa-envelope fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://getpocket.com/save?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&title=LLVM15加载自定义pass的方法"><i class="fab fa-get-pocket fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://reddit.com/submit?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&title=LLVM15加载自定义pass的方法"><i class="fab fa-reddit fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.stumbleupon.com/submit?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&title=LLVM15加载自定义pass的方法"><i class="fab fa-stumbleupon fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://digg.com/submit?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&title=LLVM15加载自定义pass的方法"><i class="fab fa-digg fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="http://www.tumblr.com/share/link?url=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&name=LLVM15加载自定义pass的方法&description="><i class="fab fa-tumblr fa-lg" aria-hidden="true"></i></a></li>
+  <li><a class="icon" target="_blank" rel="noopener" href="https://news.ycombinator.com/submitlink?u=https://k4nn0n.github.io/2022/12/28/LLVM15%E5%8A%A0%E8%BD%BD%E8%87%AA%E5%AE%9A%E4%B9%89pass%E7%9A%84%E6%96%B9%E6%B3%95/&t=LLVM15加载自定义pass的方法"><i class="fab fa-hacker-news fa-lg" aria-hidden="true"></i></a></li>
+</ul>
+
+    </div>
+
+    <div id="actions-footer">
+        <a id="menu" class="icon" href="#" onclick="$('#nav-footer').toggle();return false;"><i class="fas fa-bars fa-lg" aria-hidden="true"></i> Menu</a>
+        <a id="toc" class="icon" href="#" onclick="$('#toc-footer').toggle();return false;"><i class="fas fa-list fa-lg" aria-hidden="true"></i> TOC</a>
+        <a id="share" class="icon" href="#" onclick="$('#share-footer').toggle();return false;"><i class="fas fa-share-alt fa-lg" aria-hidden="true"></i> Share</a>
+        <a id="top" style="display:none" class="icon" href="#" onclick="$('html, body').animate({ scrollTop: 0 }, 'fast');"><i class="fas fa-chevron-up fa-lg" aria-hidden="true"></i> Top</a>
+    </div>
+
+  </div>
+</div>
+
+        
+        <footer id="footer">
+  <div class="footer-left">
+    Copyright &copy;
+    
+    
+    2016-2023
+    K4NN0N
+  </div>
+  <div class="footer-right">
+    <nav>
+      <ul>
+        <!--
+       --><li><a href="/">Home</a></li><!--
+     --><!--
+       --><li><a href="/about/">About</a></li><!--
+     --><!--
+       --><li><a href="/archives/">Articles</a></li><!--
+     --><!--
+       --><li><a href="/search/">Search</a></li><!--
+     -->
+      </ul>
+    </nav>
+  </div>
+</footer>
+
+    </div>
+    <!-- styles -->
+
+
+
+  <link rel="preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'"/>
+
+
+    <!-- jquery -->
+ 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" crossorigin="anonymous"></script> 
+
+
+
+
+<!-- clipboard -->
+
+  
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.7/clipboard.min.js" crossorigin="anonymous"></script> 
+  
+  <script type="text/javascript">
+  $(function() {
+    // copy-btn HTML
+    var btn = "<span class=\"btn-copy tooltipped tooltipped-sw\" aria-label=\"Copy to clipboard!\">";
+    btn += '<i class="far fa-clone"></i>';
+    btn += '</span>'; 
+    // mount it!
+    $(".highlight table").before(btn);
+    var clip = new ClipboardJS('.btn-copy', {
+      text: function(trigger) {
+        return Array.from(trigger.nextElementSibling.querySelectorAll('.code')).reduce((str,it)=>str+it.innerText+'\n','')
+      }
+    });
+    clip.on('success', function(e) {
+      e.trigger.setAttribute('aria-label', "Copied!");
+      e.clearSelection();
+    })
+  })
+  </script>
+
+
+<script src="/js/main.js"></script>
+
+<!-- search -->
+
+<!-- Google Analytics -->
+
+<!-- Baidu Analytics -->
+
+<!-- Cloudflare Analytics -->
+
+<!-- Umami Analytics -->
+
+<!-- Disqus Comments -->
+
+<!-- utterances Comments -->
+
+</body>
+</html>
